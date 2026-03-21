@@ -12,7 +12,7 @@ export const connectWebSocket = (token, onMessage) => {
     }
 
     // Connect with JWT token in query string for authentication
-    const wsUrl = `wss://semifitted-neymar-granular.ngrok-free.dev/ws/notifications/?token=${token}`
+    const wsUrl = `ws://localhost:8000/ws/notifications/?token=${token}`
     socket = new WebSocket(wsUrl)
 
     socket.onopen = () => {
