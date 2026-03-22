@@ -1,8 +1,7 @@
 // context/AuthContext.jsx — Global authentication state
-
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import api from '../api/axios'
-import { connectWebSocket, disconnectWebSocket } from '../api/websocket'
+// REMOVED: import { connectWebSocket, disconnectWebSocket } from '../api/websocket'
 
 const AuthContext = createContext(null)
 
@@ -16,14 +15,13 @@ export const AuthProvider = ({ children }) => {
         const savedUser = localStorage.getItem('user')
         if (token && savedUser) {
             setUser(JSON.parse(savedUser))
-            // Re-establish WebSocket connection
-            connectWebSocket(token, () => { })
+            // REMOVED: WebSocket connection
+            // No need to connect WebSocket anymore
         }
         setLoading(false)
     }, [])
 
     const login = async (username, password) => {
-        // Send username instead of email
         const res = await api.post('/auth/login/', { username, password })
         const { access, refresh, user: userData } = res.data
 
@@ -32,7 +30,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData))
 
         setUser(userData)
-        connectWebSocket(access, () => { })
+        // REMOVED: connectWebSocket(access, () => { })
+        // WebSocket removed - notifications will use HTTP polling
 
         return userData
     }
@@ -46,7 +45,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData))
 
         setUser(userData)
-        connectWebSocket(access, () => { })
+        // REMOVED: connectWebSocket(access, () => { })
+
         return userData
     }
 
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('user')
         setUser(null)
-        disconnectWebSocket()
+        // REMOVED: disconnectWebSocket()
     }
 
     const updateUser = (userData) => {
