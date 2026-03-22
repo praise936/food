@@ -6,11 +6,12 @@ import { Star, Clock, MapPin, CheckCircle } from 'lucide-react'
 
 const RestaurantCard = ({ restaurant }) => {
     const {
+        
         id,
         name,
         cuisine_type,
-        cover_image_url,
-        logo_url,
+        cover_image,
+        logo,
         average_rating,
         total_reviews,
         address,

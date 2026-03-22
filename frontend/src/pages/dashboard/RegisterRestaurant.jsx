@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import api from '../../api/axios'
 import toast from 'react-hot-toast'
+import { uploadImage } from '../../api/uploadImage'
 import {
     Store, ArrowLeft, Upload, User, CheckCircle,
     Printer, Eye, EyeOff, ChevronRight
@@ -117,18 +118,51 @@ const RegisterRestaurant = () => {
     const handleRestaurantSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
-        try {
-            const data = new FormData()
-            // Attach the manager we just created
-            data.append('manager_id', createdManager.id)
-            Object.entries(restaurantForm).forEach(([key, val]) => {
-                if (val !== null && val !== '') data.append(key, val)
-            })
 
-            const res = await api.post('/restaurants/', data)
+        try {
+            let coverImageUrl = null
+            let logoUrl = null
+
+            // Upload cover image
+            if (restaurantForm.cover_image) {
+                coverImageUrl = await uploadImage(restaurantForm.cover_image)
+
+                if (!coverImageUrl) {
+                    toast.error("Cover image upload failed")
+                    return
+                }
+            }
+
+            // Upload logo
+            if (restaurantForm.logo) {
+                logoUrl = await uploadImage(restaurantForm.logo)
+
+                if (!logoUrl) {
+                    toast.error("Logo upload failed")
+                    return
+                }
+            }
+
+            // Send JSON (NOT FormData)
+            const payload = {
+                name: restaurantForm.name,
+                description: restaurantForm.description,
+                address: restaurantForm.address,
+                phone: restaurantForm.phone,
+                email: restaurantForm.email,
+                cuisine_type: restaurantForm.cuisine_type,
+                opening_hours: restaurantForm.opening_hours,
+                manager_id: createdManager.id,
+                cover_image: coverImageUrl,
+                logo: logoUrl,
+            }
+
+            const res = await api.post('/restaurants/', payload)
+
             setCreatedRestaurant(res.data)
             toast.success('Restaurant registered!')
             setStep(3)
+
         } catch (err) {
             const errors = err.response?.data
             if (errors) {

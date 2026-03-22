@@ -7,6 +7,7 @@ import MenuItemCard from '../../components/MenuItemCard'
 import api from '../../api/axios'
 import toast from 'react-hot-toast'
 import { Plus, ArrowLeft, Upload, X } from 'lucide-react'
+import { uploadImage } from '../../api/uploadImage'
 
 const ManageMenu = () => {
     const navigate = useNavigate()
@@ -61,21 +62,60 @@ const ManageMenu = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+
         if (!restaurant) return
         setSubmitting(true)
-        try {
-            const data = new FormData()
-            Object.entries(form).forEach(([key, val]) => {
-                if (val !== null && val !== '') data.append(key, val)
-            })
 
-            await api.post(`/menu/${restaurant.id}/`, data)
+        try {
+            // 1. Upload image to Supabase
+            let imageUrl = null
+            if (form.image && form.image.size > 2 * 1024 * 1024) {
+                toast.error("Image must be less than 2MB")
+                return
+            }
+            if (form.image) {
+                imageUrl = await uploadImage(form.image)
+
+                if (!imageUrl) {
+                    toast.error("Image upload failed")
+                    return
+                }
+            }
+
+            // 2. Send JSON to backend (NOT FormData)
+            const payload = {
+                name: form.name,
+                description: form.description,
+                price: form.price,
+                category: form.category,
+                availability: form.availability,
+                prep_time_minutes: form.prep_time_minutes,
+                is_featured: form.is_featured,
+                image: imageUrl, // ✅ THIS is what backend stores
+            }
+
+            await api.post(`/menu/${restaurant.id}/`, payload)
+
             toast.success('Menu item added!')
             setShowForm(false)
-            setForm({ name: '', description: '', price: '', category: '', availability: 'available', prep_time_minutes: 20, is_featured: false, image: null })
+
+            // Reset form
+            setForm({
+                name: '',
+                description: '',
+                price: '',
+                category: '',
+                availability: 'available',
+                prep_time_minutes: 20,
+                is_featured: false,
+                image: null,
+            })
+
             setImagePreview(null)
             fetchData()
+
         } catch (err) {
+            console.error(err)
             toast.error('Failed to add item')
         } finally {
             setSubmitting(false)

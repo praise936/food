@@ -9,7 +9,7 @@ const MenuItemCard = ({ item, onAddToCart, isManagerView = false, onToggleAvaila
         name,
         description,
         price,
-        image_url,
+        image,
         availability,
         prep_time_minutes,
         category_name,

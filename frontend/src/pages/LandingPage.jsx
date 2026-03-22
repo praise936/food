@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar'
 import api from '../api/axios'
 import { Store, TrendingUp } from 'lucide-react'
 import { useCart } from '../utils/helpers'
+import { uploadImage } from '../api/uploadImage'
 
 // Import your hero background image from assets
 import heroBg from '../assets/hero-bg.jpg'
@@ -17,6 +18,7 @@ import Footer from '../components/Footer'
 import FloatingCart from '../components/FloatingCart'
 
 const LandingPage = () => {
+    
     
     const { user } = useAuth()
     const [restaurants, setRestaurants] = useState([])
