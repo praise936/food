@@ -5,7 +5,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
-import { Store, Users, ShoppingBag, PlusCircle, XCircle, CheckCircle, TrendingUp } from 'lucide-react'
+import { Store, Users, ShoppingBag, PlusCircle, XCircle, CheckCircle, TrendingUp, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const AdminDashboard = () => {
     const { user, logout } = useAuth()
@@ -35,7 +36,7 @@ const AdminDashboard = () => {
             setLoading(false)
         }
     }
-
+    // className="py-3 px-2
     const handleSuspendToggle = async (restaurantId, currentStatus) => {
         const action = currentStatus === 'active' ? 'suspend' : 'activate'
         try {
@@ -43,6 +44,22 @@ const AdminDashboard = () => {
             fetchAll()
         } catch (err) {
             console.error(err)
+        }
+    }
+    const handleDelete = async (restaurantId, restaurantName) => {
+        // Double confirm because this is irreversible
+        const confirmed = window.confirm(
+            `Are you sure you want to permanently delete "${restaurantName}"?\n\nThis will also delete all its menu items, orders and reviews. This cannot be undone.`
+        )
+        if (!confirmed) return
+
+        try {
+            await api.delete(`/restaurants/${restaurantId}/delete/`)
+            toast.success(`"${restaurantName}" has been deleted.`)
+            // Remove from local state immediately without refetching
+            setRestaurants((prev) => prev.filter((r) => r.id !== restaurantId))
+        } catch (err) {
+            toast.error('Failed to delete restaurant')
         }
     }
 
@@ -106,8 +123,8 @@ const AdminDashboard = () => {
                                     <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                         <td className="py-3 px-2">
                                             <div className="flex items-center gap-2">
-                                                {r.logo_url ? (
-                                                    <img src={r.logo_url} className="w-8 h-8 rounded-lg object-cover" alt={r.name} />
+                                                {r.logo ? (
+                                                    <img src={r.logo} className="w-8 h-8 rounded-lg object-cover" alt={r.name} />
                                                 ) : (
                                                     <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center">
                                                         <span className="text-xs font-bold">{r.name[0]}</span>
@@ -131,15 +148,29 @@ const AdminDashboard = () => {
                                             <span className="font-semibold text-brand-black">⭐ {r.average_rating}</span>
                                         </td>
                                         <td className="py-3 px-2">
-                                            <button
-                                                onClick={() => handleSuspendToggle(r.id, r.status)}
-                                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
-                          ${r.status === 'active'
-                                                        ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                                        : 'bg-green-50 text-green-600 hover:bg-green-100'
-                                                    }`}>
-                                                {r.status === 'active' ? <><XCircle size={12} />Suspend</> : <><CheckCircle size={12} />Activate</>}
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                {/* Suspend / Activate */}
+                                                <button
+                                                    onClick={() => handleSuspendToggle(r.id, r.status)}
+                                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+                            ${r.status === 'active'
+                                                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                            : 'bg-green-50 text-green-600 hover:bg-green-100'
+                                                        }`}>
+                                                    {r.status === 'active'
+                                                        ? <><XCircle size={12} />Suspend</>
+                                                        : <><CheckCircle size={12} />Activate</>}
+                                                </button>
+
+                                                {/* Delete permanently */}
+                                                <button
+                                                    onClick={() => handleDelete(r.id, r.name)}
+                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs
+                                     font-semibold bg-gray-900 text-white hover:bg-black transition-all">
+                                                    <Trash2 size={12} />
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -187,3 +218,5 @@ const AdminDashboard = () => {
 }
 
 export default AdminDashboard
+
+handleSuspendToggle
