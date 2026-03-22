@@ -7,7 +7,7 @@ export const uploadImage = async (file) => {
     const fileName = `${Date.now()}-${file.name}`
 
     const { error } = await supabase.storage
-        .from("images")
+        .from("mood-images")
         .upload(fileName, file)
 
     if (error) {
@@ -16,7 +16,7 @@ export const uploadImage = async (file) => {
     }
 
     const { data } = supabase.storage
-        .from("images")
+        .from("mood-images")
         .getPublicUrl(fileName)
 
     return data.publicUrl
