@@ -99,9 +99,9 @@ const CartPage = () => {
 
                                     {/* Food image */}
                                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                                        {item.image_url ? (
+                                        {item.image ? (
                                             <img
-                                                src={item.image_url}
+                                                src={item.image}
                                                 alt={item.name}
                                                 className="w-full h-full object-cover"
                                             />
