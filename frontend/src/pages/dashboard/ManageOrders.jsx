@@ -1,13 +1,11 @@
 // pages/dashboard/ManageOrders.jsx — Restaurant manager manages incoming orders
-
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import api from '../../api/axios'
-import { addMessageListener } from '../../api/websocket'
 import { formatDate, formatCurrency, getStatusColor } from '../../utils/helpers'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Package, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Package, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 
 // Status progression for restaurant manager
 const STATUS_ACTIONS = {
@@ -24,43 +22,107 @@ const ManageOrders = () => {
     const [restaurant, setRestaurant] = useState(null)
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
     const [expandedOrder, setExpandedOrder] = useState(null)
     const [filterStatus, setFilterStatus] = useState('all')
+    const pollingInterval = useRef(null)
+    const lastOrderCount = useRef(0)
 
+    // Fetch restaurant and orders
+    const fetchData = useCallback(async (showRefreshing = false) => {
+        if (showRefreshing) setRefreshing(true)
+
+        try {
+            // Get restaurant info
+            const restRes = await api.get('/restaurants/my-restaurant/')
+            setRestaurant(restRes.data)
+
+            // Get orders for this restaurant
+            const ordersRes = await api.get(`/orders/restaurant/${restRes.data.id}/`)
+            const newOrders = ordersRes.data
+
+            // Check for new orders (by comparing count)
+            const previousCount = lastOrderCount.current
+            const currentCount = newOrders.length
+
+            if (currentCount > previousCount) {
+                // New orders detected!
+                const newOrderCount = currentCount - previousCount
+                toast.success(`🛎️ ${newOrderCount} new order${newOrderCount > 1 ? 's' : ''} received!`, {
+                    duration: 5000,
+                })
+
+                // Play notification sound if needed (optional)
+                // new Audio('/notification.mp3').play()
+            }
+
+            setOrders(newOrders)
+            lastOrderCount.current = currentCount
+
+        } catch (err) {
+            console.error('Failed to fetch orders:', err)
+            toast.error('Failed to load orders')
+        } finally {
+            setLoading(false)
+            if (showRefreshing) setRefreshing(false)
+        }
+    }, [])
+
+    // Initial load and polling setup
     useEffect(() => {
         fetchData()
 
-        // Real-time new orders
-        const removeListener = addMessageListener((data) => {
-            if (data.type === 'NEW_ORDER') {
-                setOrders((prev) => [data.order, ...prev])
-                toast.success(`🛎️ New order #${data.order.id}!`)
+        // Set up polling for new orders (instead of WebSockets)
+        pollingInterval.current = setInterval(() => {
+            if (document.visibilityState === 'visible' && !refreshing) {
+                fetchData()
             }
-        })
+        }, 30000) // Poll every 30 seconds
 
-        return removeListener
-    }, [])
-
-    const fetchData = async () => {
-        try {
-            const restRes = await api.get('/restaurants/my-restaurant/')
-            setRestaurant(restRes.data)
-            const ordersRes = await api.get(`/orders/restaurant/${restRes.data.id}/`)
-            setOrders(ordersRes.data)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setLoading(false)
+        return () => {
+            if (pollingInterval.current) {
+                clearInterval(pollingInterval.current)
+            }
         }
+    }, [fetchData, refreshing])
+
+    // Refresh when tab becomes visible
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && !loading) {
+                fetchData()
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [fetchData, loading])
+
+    // Manual refresh handler
+    const handleManualRefresh = () => {
+        fetchData(true)
     }
 
+    // Update order status
     const handleStatusUpdate = async (orderId, newStatus) => {
         try {
             const res = await api.patch(`/orders/${orderId}/status/`, { status: newStatus })
+
+            // Update orders list with the updated order
             setOrders((prev) => prev.map((o) => o.id === orderId ? res.data : o))
-            toast.success(`Order #${orderId} updated to: ${newStatus}`)
+
+            // Show success message
+            const statusDisplay = res.data.status_display || newStatus
+            toast.success(`Order #${orderId} updated to: ${statusDisplay}`)
+
+            // Optional: Play success sound
+            // new Audio('/success.mp3').play()
+
         } catch (err) {
-            toast.error('Failed to update order')
+            console.error('Failed to update order:', err)
+            toast.error(err.response?.data?.error || 'Failed to update order')
         }
     }
 
@@ -70,23 +132,41 @@ const ManageOrders = () => {
 
     const statusFilters = ['all', 'pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled']
 
+    const pendingCount = orders.filter(o => o.status === 'pending').length
+
     return (
         <div className="min-h-screen bg-brand-white-soft">
             <Navbar />
             <div className="container-main py-8">
 
                 {/* Header */}
-                <div className="flex items-center gap-3 mb-6">
-                    <button onClick={() => navigate('/dashboard')}
-                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                        <ArrowLeft size={18} />
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                            aria-label="Go back"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <h1 className="text-2xl font-black text-brand-black">Manage Orders</h1>
+                        {pendingCount > 0 && (
+                            <span className="badge-amber animate-pulse">
+                                {pendingCount} pending
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Refresh button */}
+                    <button
+                        onClick={handleManualRefresh}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-brand-gray hover:text-brand-black transition-colors disabled:opacity-50"
+                        aria-label="Refresh orders"
+                    >
+                        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                        {refreshing ? 'Refreshing...' : 'Refresh'}
                     </button>
-                    <h1 className="text-2xl font-black text-brand-black">Manage Orders</h1>
-                    {orders.filter(o => o.status === 'pending').length > 0 && (
-                        <span className="badge-amber animate-pulse">
-                            {orders.filter(o => o.status === 'pending').length} pending
-                        </span>
-                    )}
                 </div>
 
                 {/* Status filter tabs */}
@@ -96,8 +176,12 @@ const ManageOrders = () => {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`px-4 py-1.5 rounded-full text-sm font-semibold capitalize transition-all
-                ${filterStatus === status ? 'bg-brand-black text-white' : 'bg-white text-brand-gray hover:bg-gray-100'}`}>
-                            {status} {status !== 'all' && `(${orders.filter(o => o.status === status).length})`}
+                                ${filterStatus === status
+                                    ? 'bg-brand-black text-white'
+                                    : 'bg-white text-brand-gray hover:bg-gray-100'}`}
+                        >
+                            {status}
+                            {status !== 'all' && ` (${orders.filter(o => o.status === status).length})`}
                         </button>
                     ))}
                 </div>
@@ -116,7 +200,19 @@ const ManageOrders = () => {
                     <div className="text-center py-20">
                         <Package size={48} className="text-gray-200 mx-auto mb-3" />
                         <p className="font-bold text-brand-black">No orders</p>
-                        <p className="text-brand-gray text-sm">Orders will appear here in real time</p>
+                        <p className="text-brand-gray text-sm">
+                            {filterStatus === 'all'
+                                ? 'Orders will appear here as they come in'
+                                : `No ${filterStatus} orders found`}
+                        </p>
+                        {filterStatus !== 'all' && (
+                            <button
+                                onClick={() => setFilterStatus('all')}
+                                className="mt-4 text-sm text-brand-accent hover:underline"
+                            >
+                                View all orders
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -127,69 +223,127 @@ const ManageOrders = () => {
                                     {/* Order header */}
                                     <button
                                         className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                                        onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
+                                        onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                                    >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-2 h-12 rounded-full ${order.status === 'pending' ? 'bg-brand-accent animate-pulse' : 'bg-gray-200'}`} />
+                                            <div className={`w-2 h-12 rounded-full 
+                                                ${order.status === 'pending'
+                                                    ? 'bg-brand-accent animate-pulse'
+                                                    : order.status === 'completed'
+                                                        ? 'bg-green-500'
+                                                        : 'bg-gray-200'}`}
+                                            />
                                             <div className="text-left">
                                                 <p className="font-bold text-brand-black">Order #{order.id}</p>
-                                                <p className="text-sm text-brand-gray">{order.customer_name} · {formatDate(order.created_at)}</p>
+                                                <p className="text-sm text-brand-gray">
+                                                    {order.customer_name || order.customer_email} · {formatDate(order.created_at)}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className={getStatusColor(order.status)}>{order.status_display}</span>
-                                            <span className="font-bold text-brand-black">{formatCurrency(order.total_amount)}</span>
+                                            <span className={getStatusColor(order.status)}>
+                                                {order.status_display || order.status}
+                                            </span>
+                                            <span className="font-bold text-brand-black">
+                                                {formatCurrency(order.total_amount)}
+                                            </span>
                                             {expandedOrder === order.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                         </div>
                                     </button>
 
-                                    {/* Expanded */}
+                                    {/* Expanded details */}
                                     {expandedOrder === order.id && (
                                         <div className="border-t border-gray-100 p-5 space-y-4">
+                                            {/* Customer info */}
+                                            <div className="bg-gray-50 rounded-xl p-3 text-sm">
+                                                <p className="font-semibold text-brand-black mb-1">Customer Details</p>
+                                                <p className="text-brand-gray">
+                                                    {order.customer_name || order.customer_email}
+                                                    {order.customer_phone && ` · ${order.customer_phone}`}
+                                                </p>
+                                            </div>
+
                                             {/* Items */}
-                                            <div className="space-y-2">
-                                                {order.items.map((item) => (
-                                                    <div key={item.id} className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2">
-                                                            {item.menu_item_image_url && (
-                                                                <img src={item.menu_item_image_url} alt={item.menu_item_name}
-                                                                    className="w-8 h-8 rounded-lg object-cover" />
-                                                            )}
-                                                            <span className="text-brand-black">{item.menu_item_name} × {item.quantity}</span>
+                                            <div>
+                                                <p className="text-xs font-semibold text-brand-gray uppercase tracking-wider mb-2">
+                                                    Order Items
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {order.items && order.items.map((item) => (
+                                                        <div key={item.id} className="flex items-center justify-between text-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                {item.menu_item_image_url && (
+                                                                    <img
+                                                                        src={item.menu_item_image_url}
+                                                                        alt={item.menu_item_name}
+                                                                        className="w-8 h-8 rounded-lg object-cover"
+                                                                        onError={(e) => {
+                                                                            e.target.style.display = 'none'
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                                <span className="text-brand-black">
+                                                                    {item.menu_item_name} × {item.quantity}
+                                                                </span>
+                                                            </div>
+                                                            <span className="font-semibold">
+                                                                {formatCurrency(item.subtotal)}
+                                                            </span>
                                                         </div>
-                                                        <span className="font-semibold">{formatCurrency(item.subtotal)}</span>
-                                                    </div>
-                                                ))}
+                                                    ))}
+                                                </div>
                                             </div>
 
                                             {order.notes && (
                                                 <div className="bg-amber-50 rounded-xl p-3 text-sm text-amber-800">
-                                                    <span className="font-semibold">Note:</span> {order.notes}
+                                                    <span className="font-semibold">Special Instructions:</span> {order.notes}
                                                 </div>
                                             )}
 
-                                            {/* Action button */}
-                                            {action && (
-                                                <button
-                                                    onClick={() => handleStatusUpdate(order.id, action.next)}
-                                                    className={`${action.color} text-white font-semibold px-6 py-2.5 rounded-xl
-                                      hover:opacity-90 transition-opacity flex items-center gap-2`}>
-                                                    {action.label}
-                                                </button>
-                                            )}
+                                            {/* Action buttons */}
+                                            <div className="flex gap-3 flex-wrap">
+                                                {action && (
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(order.id, action.next)}
+                                                        className={`${action.color} text-white font-semibold px-6 py-2.5 rounded-xl
+                                                            hover:opacity-90 transition-opacity flex items-center gap-2`}
+                                                    >
+                                                        {action.label}
+                                                    </button>
+                                                )}
 
-                                            {/* Cancel option */}
-                                            {!['completed', 'cancelled'].includes(order.status) && (
-                                                <button
-                                                    onClick={() => handleStatusUpdate(order.id, 'cancelled')}
-                                                    className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">
-                                                    Cancel Order
-                                                </button>
-                                            )}
+                                                {/* Cancel option */}
+                                                {!['completed', 'cancelled'].includes(order.status) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm(`Are you sure you want to cancel Order #${order.id}?`)) {
+                                                                handleStatusUpdate(order.id, 'cancelled')
+                                                            }
+                                                        }}
+                                                        className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors px-4 py-2 rounded-xl hover:bg-red-50"
+                                                    >
+                                                        Cancel Order
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             )
                         })}
+                    </div>
+                )}
+
+                {/* Last updated timestamp */}
+                {!loading && orders.length > 0 && (
+                    <div className="text-center mt-6 text-xs text-brand-gray">
+                        Last updated: {new Date().toLocaleTimeString()}
+                        <button
+                            onClick={handleManualRefresh}
+                            className="ml-2 text-brand-accent hover:underline"
+                        >
+                            refresh now
+                        </button>
                     </div>
                 )}
             </div>
