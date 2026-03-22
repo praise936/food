@@ -1,6 +1,5 @@
 // pages/RestaurantDetailPage.jsx — Full restaurant detail with menu and reviews
-
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
@@ -8,18 +7,16 @@ import MenuItemCard from '../components/MenuItemCard'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../utils/helpers'
-import { subscribeToRestaurant } from '../api/websocket'
+// REMOVED: import { subscribeToRestaurant } from '../api/websocket'
 import toast from 'react-hot-toast'
 import {
     Star, MapPin, Clock, Phone, ChevronLeft,
-    MessageSquare, Send
+    MessageSquare, Send, RefreshCw
 } from 'lucide-react'
 import Footer from '../components/Footer'
 import FloatingCart from '../components/FloatingCart'
 
 const RestaurantDetailPage = () => {
-    
-     
     const { id } = useParams()
     const { user } = useAuth()
     const navigate = useNavigate()
@@ -30,6 +27,7 @@ const RestaurantDetailPage = () => {
     const [categories, setCategories] = useState([])
     const [reviews, setReviews] = useState([])
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
     const [activeTab, setActiveTab] = useState('menu')
     const [activeCategory, setActiveCategory] = useState('all')
 
@@ -37,14 +35,13 @@ const RestaurantDetailPage = () => {
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
     const [submittingReview, setSubmittingReview] = useState(false)
 
-    useEffect(() => {
-        fetchAll()
-        // Subscribe to real-time menu updates for this restaurant
-        subscribeToRestaurant(id)
-    }, [id])
+    // Polling reference
+    const pollingInterval = useRef(null)
 
-    const fetchAll = async () => {
-        setLoading(true)
+    // Fetch all restaurant data
+    const fetchAll = useCallback(async (showRefreshing = false) => {
+        if (showRefreshing) setRefreshing(true)
+
         try {
             const [restRes, menuRes, reviewRes, catRes] = await Promise.all([
                 api.get(`/restaurants/${id}/`),
@@ -57,11 +54,71 @@ const RestaurantDetailPage = () => {
             setReviews(reviewRes.data)
             setCategories(catRes.data)
         } catch (err) {
-            console.error(err)
+            console.error('Failed to load restaurant data:', err)
             toast.error('Failed to load restaurant')
         } finally {
             setLoading(false)
+            if (showRefreshing) setRefreshing(false)
         }
+    }, [id])
+
+    // Initial load
+    useEffect(() => {
+        fetchAll()
+
+        // Set up polling for menu updates (instead of WebSockets)
+        // Poll every 30 seconds to check for menu changes
+        pollingInterval.current = setInterval(() => {
+            // Only poll if the page is visible, not already refreshing, and user is on menu tab
+            if (document.visibilityState === 'visible' && !refreshing && activeTab === 'menu') {
+                fetchMenuOnly() // Only fetch menu items to reduce data transfer
+            }
+        }, 30000) // 30 seconds
+
+        // Clean up polling on unmount
+        return () => {
+            if (pollingInterval.current) {
+                clearInterval(pollingInterval.current)
+            }
+        }
+    }, [fetchAll, id, refreshing, activeTab])
+
+    // Function to fetch only menu items (lighter than full fetch)
+    const fetchMenuOnly = useCallback(async () => {
+        try {
+            const menuRes = await api.get(`/menu/${id}/`)
+            setMenuItems(menuRes.data)
+        } catch (err) {
+            console.error('Failed to fetch menu updates:', err)
+        }
+    }, [id])
+
+    // Refresh data when tab changes back to menu
+    useEffect(() => {
+        if (activeTab === 'menu' && !loading) {
+            fetchMenuOnly()
+        }
+    }, [activeTab, fetchMenuOnly, loading])
+
+    // Optional: Refresh when user returns to page
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && !loading) {
+                // Refresh data when user returns to tab
+                fetchAll()
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [fetchAll, loading])
+
+    // Manual refresh handler
+    const handleManualRefresh = () => {
+        fetchAll(true)
+        toast.success('Refreshing restaurant data...')
     }
 
     const handleAddToCart = (item) => {
@@ -71,12 +128,18 @@ const RestaurantDetailPage = () => {
 
     const handleSubmitReview = async (e) => {
         e.preventDefault()
-        if (!user) { navigate('/login'); return }
+        if (!user) {
+            navigate('/login')
+            return
+        }
+
         setSubmittingReview(true)
         try {
             await api.post(`/reviews/${id}/`, reviewForm)
             toast.success('Review submitted!')
             setReviewForm({ rating: 5, comment: '' })
+
+            // Refresh reviews after submission
             const res = await api.get(`/reviews/${id}/`)
             setReviews(res.data)
         } catch (err) {
@@ -118,19 +181,40 @@ const RestaurantDetailPage = () => {
                 <Sidebar />
 
                 <main className="flex-1 p-6">
-                    {/* Back button */}
-                    <button onClick={() => navigate(-1)}
-                        className="flex items-center gap-1.5 text-sm text-brand-gray hover:text-brand-black mb-4 transition-colors">
-                        <ChevronLeft size={16} /> Back
-                    </button>
+                    {/* Back button and refresh */}
+                    <div className="flex justify-between items-center mb-4">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-1.5 text-sm text-brand-gray hover:text-brand-black transition-colors"
+                        >
+                            <ChevronLeft size={16} /> Back
+                        </button>
+
+                        {/* Manual refresh button */}
+                        <button
+                            onClick={handleManualRefresh}
+                            disabled={refreshing}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-brand-gray hover:text-brand-black transition-colors disabled:opacity-50"
+                        >
+                            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                            {refreshing ? 'Refreshing...' : 'Refresh'}
+                        </button>
+                    </div>
 
                     {/* Hero banner */}
                     <div className="card overflow-hidden mb-6">
                         {/* Cover image */}
                         <div className="relative h-56 bg-gray-100">
                             {restaurant.cover_image_url ? (
-                                <img src={restaurant.cover_image_url} alt={restaurant.name}
-                                    className="w-full h-full object-cover" />
+                                <img
+                                    src={restaurant.cover_image_url}
+                                    alt={restaurant.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none'
+                                        e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center"><span class="text-6xl">🍽️</span></div>'
+                                    }}
+                                />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
                                     <span className="text-6xl">🍽️</span>
@@ -138,7 +222,7 @@ const RestaurantDetailPage = () => {
                             )}
                             {/* Open/Closed overlay badge */}
                             <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-semibold
-                ${restaurant.is_open ? 'bg-green-500 text-white' : 'bg-gray-800 text-white'}`}>
+                                ${restaurant.is_open ? 'bg-green-500 text-white' : 'bg-gray-800 text-white'}`}>
                                 {restaurant.is_open ? '● Open Now' : '● Closed'}
                             </div>
                         </div>
@@ -147,8 +231,14 @@ const RestaurantDetailPage = () => {
                         <div className="p-6 flex items-start gap-4">
                             {/* Logo */}
                             {restaurant.logo_url && (
-                                <img src={restaurant.logo_url} alt={restaurant.name}
-                                    className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md flex-shrink-0 -mt-12 relative z-10" />
+                                <img
+                                    src={restaurant.logo_url}
+                                    alt={restaurant.name}
+                                    className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md flex-shrink-0 -mt-12 relative z-10"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none'
+                                    }}
+                                />
                             )}
 
                             <div className="flex-1">
@@ -188,7 +278,7 @@ const RestaurantDetailPage = () => {
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-6 py-2 rounded-xl font-semibold text-sm capitalize transition-all
-                  ${activeTab === tab
+                                    ${activeTab === tab
                                         ? 'bg-brand-black text-white shadow-sm'
                                         : 'text-brand-gray hover:text-brand-black'
                                     }`}>
@@ -205,7 +295,7 @@ const RestaurantDetailPage = () => {
                                 <button
                                     onClick={() => setActiveCategory('all')}
                                     className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all
-                    ${activeCategory === 'all' ? 'bg-brand-black text-white' : 'bg-white text-brand-gray hover:bg-gray-100'}`}>
+                                        ${activeCategory === 'all' ? 'bg-brand-black text-white' : 'bg-white text-brand-gray hover:bg-gray-100'}`}>
                                     All
                                 </button>
                                 {categories.map((cat) => (
@@ -213,7 +303,7 @@ const RestaurantDetailPage = () => {
                                         key={cat.id}
                                         onClick={() => setActiveCategory(String(cat.id))}
                                         className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all
-                      ${activeCategory === String(cat.id) ? 'bg-brand-black text-white' : 'bg-white text-brand-gray hover:bg-gray-100'}`}>
+                                            ${activeCategory === String(cat.id) ? 'bg-brand-black text-white' : 'bg-white text-brand-gray hover:bg-gray-100'}`}>
                                         {cat.name}
                                     </button>
                                 ))}
@@ -242,7 +332,6 @@ const RestaurantDetailPage = () => {
                     {/* REVIEWS TAB */}
                     {activeTab === 'reviews' && (
                         <div className="max-w-2xl space-y-6">
-
                             {/* Write review form */}
                             {user && user.role === 'customer' && (
                                 <div className="card p-6">
@@ -271,9 +360,14 @@ const RestaurantDetailPage = () => {
                                                 placeholder="Share your experience..."
                                                 rows={3}
                                                 className="input-field resize-none"
+                                                required
                                             />
                                         </div>
-                                        <button type="submit" disabled={submittingReview} className="btn-primary flex items-center gap-2">
+                                        <button
+                                            type="submit"
+                                            disabled={submittingReview}
+                                            className="btn-primary flex items-center gap-2"
+                                        >
                                             <Send size={16} />
                                             {submittingReview ? 'Submitting...' : 'Submit Review'}
                                         </button>
@@ -292,7 +386,9 @@ const RestaurantDetailPage = () => {
                                     <div key={review.id} className="card p-5">
                                         <div className="flex items-start justify-between">
                                             <div>
-                                                <p className="font-semibold text-brand-black">{review.customer_name || review.customer_email}</p>
+                                                <p className="font-semibold text-brand-black">
+                                                    {review.customer_name || review.customer_email}
+                                                </p>
                                                 <div className="flex gap-0.5 mt-1">
                                                     {[1, 2, 3, 4, 5].map((star) => (
                                                         <span key={star} className="text-sm">
