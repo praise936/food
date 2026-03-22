@@ -30,9 +30,9 @@ const MenuItemCard = ({ item, onAddToCart, isManagerView = false, onToggleAvaila
 
             {/* Food image */}
             <div className="relative h-40 bg-gray-50 overflow-hidden">
-                {image_url ? (
+                {image ? (
                     <img
-                        src={image_url}
+                        src={image}
                         alt={name}
                         className="w-full h-full object-cover"
                     />

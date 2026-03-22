@@ -27,9 +27,9 @@ const RestaurantCard = ({ restaurant }) => {
 
                 {/* Cover image */}
                 <div className="relative h-48 bg-gray-100 overflow-hidden">
-                    {cover_image_url ? (
+                    {cover_image ? (
                         <img
-                            src={cover_image_url}
+                            src={cover_image}
                             alt={`${name} cover`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -60,8 +60,8 @@ const RestaurantCard = ({ restaurant }) => {
                             )}
                         </div>
                         {/* Logo */}
-                        {logo_url && (
-                            <img src={logo_url} alt={`${name} logo`}
+                        {logo&& (
+                            <img src={logo} alt={`${name} logo`}
                                 className="w-10 h-10 rounded-xl object-cover border-2 border-white shadow-sm" />
                         )}
                     </div>
