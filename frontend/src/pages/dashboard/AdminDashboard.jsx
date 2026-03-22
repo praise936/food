@@ -219,4 +219,3 @@ const AdminDashboard = () => {
 
 export default AdminDashboard
 
-handleSuspendToggle
