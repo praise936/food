@@ -58,7 +58,7 @@ const AdminRegisterPage = () => {
 
         setLoading(true)
         try {
-            await api.post('/auth/register/', formData)
+            await api.post('/auth/admin-setup/', formData)
             toast.success('Platform admin account created! Please log in.')
             navigate('/login')
         } catch (err) {
