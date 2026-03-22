@@ -86,3 +86,28 @@ html {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800;
   }
 }
+/* Print styles — only the receipt is printed, everything else hidden */
+@media print {
+
+  /* Hide everything except the receipt */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Make only the receipt and its children visible */
+  .print\:shadow-none,
+  .print\:shadow-none * {
+    visibility: visible;
+  }
+
+  /* Position receipt at top of page */
+  .print\:shadow-none {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Remove background colors for ink saving — comment out if you want colors */
+  /* @page { margin: 1cm; } */
+}
