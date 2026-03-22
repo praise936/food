@@ -205,9 +205,9 @@ const RestaurantDetailPage = () => {
                     <div className="card overflow-hidden mb-6">
                         {/* Cover image */}
                         <div className="relative h-56 bg-gray-100">
-                            {restaurant.cover_image_url ? (
+                            {restaurant.cover_image ? (
                                 <img
-                                    src={restaurant.cover_image_url}
+                                    src={restaurant.cover_image}
                                     alt={restaurant.name}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
