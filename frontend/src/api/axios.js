@@ -4,7 +4,7 @@ import axios from 'axios'
 
 // Base URL for all API requests
 const api = axios.create({
-    baseURL: 'https://semifitted-neymar-granular.ngrok-free.dev/api',
+    baseURL: 'https://foodcourt-production.up.railway.app/api',
     headers: {
         'Content-Type': 'application/json',
     },
