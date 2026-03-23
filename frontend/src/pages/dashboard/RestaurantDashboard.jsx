@@ -16,6 +16,7 @@ const RestaurantDashboard = () => {
     const [refreshing, setRefreshing] = useState(false)
     const [newOrderAlert, setNewOrderAlert] = useState(null)
     const pollingInterval = useRef(null)
+    // cover
 
     // Fetch all dashboard data
     const fetchData = useCallback(async (showRefreshing = false) => {
@@ -171,9 +172,9 @@ const RestaurantDashboard = () => {
                 {restaurant && (
                     <div className="card overflow-hidden mb-8">
                         <div className="relative h-32 bg-brand-black">
-                            {restaurant.cover_image_url && (
+                            {restaurant.cover_image && (
                                 <img
-                                    src={restaurant.cover_image_url}
+                                    src={restaurant.cover_image}
                                     alt={restaurant.name}
                                     className="w-full h-full object-cover opacity-50"
                                     onError={(e) => {
@@ -182,9 +183,9 @@ const RestaurantDashboard = () => {
                                 />
                             )}
                             <div className="absolute inset-0 flex items-center px-6 gap-4">
-                                {restaurant.logo_url && (
+                                {restaurant.logo && (
                                     <img
-                                        src={restaurant.logo_url}
+                                        src={restaurant.logo}
                                         alt={restaurant.name}
                                         className="w-16 h-16 rounded-2xl object-cover border-2 border-white"
                                         onError={(e) => {
