@@ -48,7 +48,7 @@ const LoginPage = () => {
                             <span className="text-white">🍽</span>
                         </div>
                         <span className="text-2xl font-black text-brand-black">
-                            Food<span className="text-brand-accent">Court</span>
+                            MOI<span className="text-brand-accent">EATS</span>
                         </span>
                     </Link>
                     <h1 className="text-2xl font-bold text-brand-black mt-4">Welcome back</h1>
@@ -115,6 +115,13 @@ const LoginPage = () => {
                                 <><LogIn size={18} /> Sign In</>
                             )}
                         </button>
+                        <div className="text-center">
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm text-brand-gray hover:text-brand-black transition-colors">
+                                Forgot your password?
+                            </Link>
+                        </div>
                     </form>
 
                     <p className="text-center text-sm text-brand-gray mt-6">

@@ -1,4 +1,5 @@
 // components/Navbar.jsx — Top navigation bar
+// {/* User avatar / name chip */}
 
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -82,16 +83,24 @@ const Navbar = ({ cartCount = 0 }) => {
                                 )}
 
                                 {/* User avatar / name chip */}
-                                <div className="flex items-center gap-2 px-3 py-2 bg-brand-white-mid rounded-xl">
+                                {/* User chip — click to go to profile */}
+                                <Link to="/profile"
+                                    className="flex items-center gap-2 px-3 py-2 bg-brand-white-mid
+                             rounded-xl hover:bg-gray-200 transition-colors">
                                     <div className="w-7 h-7 bg-brand-black rounded-full flex items-center justify-center">
-                                        <span className="text-white text-xs font-bold">
-                                            {user.first_name?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase()}
-                                        </span>
+                                        {user.avatar_url ? (
+                                            <img src={user.avatar_url} alt="avatar"
+                                                className="w-full h-full rounded-full object-cover" />
+                                        ) : (
+                                            <span className="text-white text-xs font-bold">
+                                                {user.first_name?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase()}
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="text-sm font-medium text-brand-black">
                                         {user.first_name || user.username}
                                     </span>
-                                </div>
+                                </Link>
 
                                 {/* Logout */}
                                 <button

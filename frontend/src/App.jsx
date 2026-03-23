@@ -6,6 +6,10 @@ import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 
 // Pages
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import ProfilePage from './pages/ProfilePage'
+import RestaurantSettings from './pages/dashboard/RestaurantSettings'
 import AdminRegisterPage from './pages/AdminRegisterPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -35,6 +39,24 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/admin-setup" element={<AdminRegisterPage />} />
           <Route path="/restaurant/:id" element={<RestaurantDetailPage />} />
+
+          {/* Password reset — public */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
+          {/* Profile — any logged in user */}
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } />
+
+          {/* Restaurant settings — manager only */}
+          <Route path="/dashboard/settings" element={
+            <ProtectedRoute requiredRole="restaurant_manager">
+              <RestaurantSettings />
+            </ProtectedRoute>
+          } />
 
           {/* Protected — any logged in user */}
           <Route path="/cart" element={

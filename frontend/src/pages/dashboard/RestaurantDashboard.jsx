@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
-import { ShoppingBag, Utensils, Star, TrendingUp, Bell, RefreshCw } from 'lucide-react'
+import { ShoppingBag, Utensils, Star, TrendingUp, Bell, RefreshCw, Settings } from 'lucide-react'
 
 const RestaurantDashboard = () => {
     const { user } = useAuth()
@@ -279,6 +279,16 @@ const RestaurantDashboard = () => {
                                     ? `${pendingOrders} pending order${pendingOrders > 1 ? 's' : ''}!`
                                     : 'View and update order status'}
                             </p>
+                        </div>
+                    </Link>
+                    <Link to="/dashboard/settings"
+                        className="card p-6 flex items-center gap-4 hover:shadow-shiny transition-all cursor-pointer group">
+                        <div className="w-12 h-12 bg-brand-black rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Settings size={22} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-brand-black">Restaurant Settings</h3>
+                            <p className="text-sm text-brand-gray">Update info, images and manager</p>
                         </div>
                     </Link>
                 </div>
