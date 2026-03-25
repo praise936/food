@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig)
 export const messaging = getMessaging(app)
 
 // Your VAPID public key from Firebase console
-const VAPID_KEY = "BMKwxxPrKhQTb36kRLbXgffhwWrnZD6W9XcfR55yXg2iicbYqvG2ZLmw82KcRYfQqgv5l-14_YqUkf-Uta98nwl"
+const VAPID_KEY = "BMKwxxPrKhQTb36kRLbXgffhwWrnZD6W9XcfR55yXg2iicbYqvG2ZLmw82KcRYfQqgv5l-14_YqUkf-Uta98nwI"
 
 /**
  * Request notification permission from the browser.
