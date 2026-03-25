@@ -13,6 +13,7 @@ import {
     User, Camera, Lock, Eye, EyeOff,
     Save, ArrowLeft, Shield
 } from 'lucide-react'
+import { uploadImage } from '../api/uploadImage'
 
 const ProfilePage = () => {
     const { user, updateUser } = useAuth()
