@@ -5,7 +5,7 @@ import axios from 'axios'
 // Base URL for all API requests
 // https://foodcourt-production.up.railway.app/
 const api = axios.create({
-    baseURL: 'https://foodcourt-production.up.railway.app/api',
+    baseURL: 'https://foodcourt-production.up.railway.app',
     headers: {
         'Content-Type': 'application/json',
     },

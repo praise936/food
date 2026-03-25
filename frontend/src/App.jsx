@@ -1,5 +1,6 @@
 // App.jsx — Route definitions and layout wrapper
-
+import usePushNotifications from './hooks/usePushNotifications'
+import { useAuth } from './context/AuthContext'
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
@@ -27,11 +28,17 @@ import RegisterRestaurant from './pages/dashboard/RegisterRestaurant'
 
 // Route guards
 import ProtectedRoute from './components/ProtectedRoute'
-
+// Inner component so we can use useAuth inside AuthProvider
+const PushNotificationSetup = () => {
+  const { user } = useAuth()
+  usePushNotifications(user)
+  return null
+}
 export default function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
+        <PushNotificationSetup />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
