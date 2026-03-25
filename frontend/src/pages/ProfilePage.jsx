@@ -62,13 +62,28 @@ const ProfilePage = () => {
         e.preventDefault()
         setSavingProfile(true)
         try {
-            const data = new FormData()
-            data.append('first_name', profileForm.first_name)
-            data.append('last_name', profileForm.last_name)
-            data.append('phone', profileForm.phone)
+            // First, upload avatar to Supabase if there's a new file
+            let avatarUrl = null
             if (profileForm.avatar) {
-                data.append('avatar', profileForm.avatar)
+                avatarUrl = await uploadImage(profileForm.avatar)
+                if (!avatarUrl) {
+                    toast.error('Failed to upload avatar')
+                    setSavingProfile(false)
+                    return
+                }
             }
+
+            // Then send the profile data with avatar URL
+            const data = {
+                first_name: profileForm.first_name,
+                last_name: profileForm.last_name,
+                phone: profileForm.phone,
+            }
+
+            if (avatarUrl) {
+                data.avatar = avatarUrl  // Send URL, not the file
+            }
+
             const res = await api.put('/auth/profile/', data)
             updateUser(res.data)
             toast.success('Profile updated successfully!')
