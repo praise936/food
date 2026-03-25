@@ -1,11 +1,8 @@
 // firebase-messaging-sw.js
-// Handles background push notifications from Firebase
-// This file MUST be at the root URL — /firebase-messaging-sw.js
-
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js')
 
-// Same config as frontend — must be duplicated here
+// Same config as frontend
 firebase.initializeApp({
     apiKey: "AIzaSyCVWFU9jwXZDHP0isCnZCMQYoBZOnTkHMw",
     authDomain: "foodcourt-45b2d.firebaseapp.com",
@@ -17,17 +14,17 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging()
 
-// Handle background messages — fires when app is not in focus
+// Handle background messages
 messaging.onBackgroundMessage((payload) => {
-    const { title, body } = payload.notification || {}
-    const notificationTitle = title || 'FoodCourt'
+    console.log('[firebase-messaging-sw.js] Background message received:', payload)
+
+    const notificationTitle = payload.notification?.title || 'FoodCourt'
     const notificationOptions = {
-        body: body || '',
+        body: payload.notification?.body || '',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
         vibrate: [200, 100, 200],
         data: payload.data || {},
-        // Actions that appear on the notification
         actions: [
             { action: 'open', title: 'Open App' },
         ],
@@ -36,7 +33,7 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions)
 })
 
-// When user taps the notification, open or focus the app
+// Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
     event.notification.close()
 
