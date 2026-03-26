@@ -35,13 +35,13 @@ const CartPage = () => {
                     quantity: item.quantity,
                 })),
             }
-            console.log("trying to see if we can clear cat")
+            
 
             await api.post('/orders/place/', orderData)
-            console.log("Order success, clearing cart")
+            
             // Clear cart immediately after successful order — before navigation
-            clearCart()
-            console.log("Order success, cat cleared")
+            
+            
             setNotes('')
 
             toast.success('🎉 Order placed successfully!')
@@ -198,7 +198,10 @@ const CartPage = () => {
 
                                 {/* Place order button */}
                                 <button
-                                    onClick={handlePlaceOrder}
+                                    onClick={()=>{
+                                        handlePlaceOrder()
+                                        clearCart()
+                                    }}
                                     disabled={placing}
                                     className="btn-primary w-full flex items-center justify-center gap-2 py-3">
                                     {placing ? (
