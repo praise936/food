@@ -196,7 +196,10 @@ const CartPage = () => {
 
                                 {/* Place order button */}
                                 <button
-                                    onClick={handlePlaceOrder}
+                                    onClick={()=>{
+                                        handlePlaceOrder()
+                                        clearCart()
+                                    }}
                                     disabled={placing}
                                     className="btn-primary w-full flex items-center justify-center gap-2 py-3">
                                     {placing ? (

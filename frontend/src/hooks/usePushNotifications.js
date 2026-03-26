@@ -18,7 +18,7 @@ const usePushNotifications = (user) => {
 
                 const token = await requestNotificationPermission()
                 if (!token) {
-                    console.log('No FCM token obtained')
+                    // console.log('No FCM token obtained')
                     return
                 }
 
@@ -31,7 +31,7 @@ const usePushNotifications = (user) => {
                 // Option 2: If your backend doesn't have /api prefix
                 // await api.post('/save-token/', { token })
 
-                console.log('✅ FCM token saved successfully')
+                // console.log('✅ FCM token saved successfully')
             } catch (err) {
                 // Log more details about the error
                 console.error('Push setup failed:', err.response?.data || err.message)
@@ -43,7 +43,7 @@ const usePushNotifications = (user) => {
 
         // Listen for messages while app is open (foreground)
         const unsubscribe = onForegroundMessage((payload) => {
-            console.log('Foreground notification payload:', payload)
+            // console.log('Foreground notification payload:', payload)
 
             const title = payload.notification?.title || 'FoodCourt'
             const body = payload.notification?.body || ''
