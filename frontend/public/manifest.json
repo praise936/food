@@ -1,6 +1,6 @@
 {
-    "name": "FoodCourt",
-    "short_name": "FoodCourt",
+    "name": "Moi eats",
+    "short_name": "MOI-EATS",
     "description": "Discover and order from the best restaurants near you",
     "start_url": "/",
     "display": "standalone",
