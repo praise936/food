@@ -16,7 +16,7 @@ export const uploadImage = async (file) => {
     }
 
     const { data } = supabase.storage
-        .from("mood-images")
+        .from("images")
         .getPublicUrl(fileName)
 
     return data.publicUrl
