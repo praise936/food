@@ -11,6 +11,7 @@ import {
     ArrowLeft, Upload, Save, Store,
     Users, Search, CheckCircle
 } from 'lucide-react'
+import { uploadImage } from '../../api/uploadImage'
 
 const RestaurantSettings = () => {
     const navigate = useNavigate()
@@ -123,14 +124,63 @@ const RestaurantSettings = () => {
         setSaving(true)
         try {
             const data = new FormData()
-            Object.entries(form).forEach(([key, val]) => {
-                if (val !== null && val !== '') data.append(key, val)
+
+            // Add text fields
+            const textFields = ['name', 'description', 'address', 'phone', 'email', 'cuisine_type', 'opening_hours']
+            textFields.forEach(field => {
+                if (form[field] && form[field] !== '') {
+                    data.append(field, form[field])
+                }
             })
-            const res = await api.put(`/restaurants/${restaurant.id}/`, data)
+
+            // Handle cover image upload if changed
+            if (form.cover_image && form.cover_image instanceof File) {
+                // Check file size (2MB = 2 * 1024 * 1024 bytes)
+                if (form.cover_image.size > 2 * 1024 * 1024) {
+                    toast.error("Cover image must be less than 2MB")
+                    setSaving(false)
+                    return
+                }
+
+                const coverImageUrl = await uploadImage(form.cover_image)
+                if (!coverImageUrl) {
+                    toast.error("Cover image upload failed")
+                    setSaving(false)
+                    return
+                }
+                data.append('cover_image', coverImageUrl)
+            }
+
+            // Handle logo upload if changed
+            if (form.logo && form.logo instanceof File) {
+                if (form.logo.size > 2 * 1024 * 1024) {
+                    toast.error("Logo must be less than 2MB")
+                    setSaving(false)
+                    return
+                }
+
+                const logoImageUrl = await uploadImage(form.logo)
+                if (!logoImageUrl) {
+                    toast.error("Logo upload failed")
+                    setSaving(false)
+                    return
+                }
+                data.append('logo', logoImageUrl)
+            }
+
+            const res = await api.put(`/restaurants/${restaurant.id}/`, data, {
+            })
+
             setRestaurant(res.data)
+
+            // Reset previews if needed
+            setCoverPreview(null)
+            setLogoPreview(null)
+
             toast.success('Restaurant settings saved!')
         } catch (err) {
-            toast.error('Failed to save settings')
+            console.error('Save error:', err)
+            toast.error('Failed to save settings: ' + (err.response?.data?.detail || err.message))
         } finally {
             setSaving(false)
         }

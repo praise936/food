@@ -18,16 +18,16 @@ const messaging = firebase.messaging()
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Background message received:', payload)
 
-    const notificationTitle = payload.notification?.title || 'FoodCourt'
+    const notificationTitle =
+        payload.notification?.title || payload.data?.title || 'FoodCourt'
+
     const notificationOptions = {
-        body: payload.notification?.body || '',
-        icon: 'icon-192x192.png',
-        badge: 'icon-72x72.png',
+        body:
+            payload.notification?.body || payload.data?.body || '',
+        icon: '/icon-192x192.png',
+        badge: '/icon-72x72.png',
         vibrate: [200, 100, 200],
         data: payload.data || {},
-        actions: [
-            { action: 'open', title: 'Open App' },
-        ],
     }
 
     self.registration.showNotification(notificationTitle, notificationOptions)
